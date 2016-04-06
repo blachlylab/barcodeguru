@@ -30,6 +30,7 @@ def main():
     print("Pool size:\t" + rules.PoolSize(barcodes))
     print("Dual Lasers:\t" + rules.Lasers(barcodes))
     print("Base Matches:\t" + rules.BaseMatch(barcodes))
+    print("Nucleotide frequencies:\t" + rules.pwm(barcodes))
     print("")
     return True
 

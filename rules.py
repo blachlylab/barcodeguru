@@ -83,8 +83,21 @@ def Lasers(bc):
     return "OK"
 
 def BaseMatch(barcodes):
-    """Ensure that between any two indexes, there are
-    fewer than 4 identical bases at any given position.
+    """
+    Ensure appropriate Hamming distance between any two barcodes
+    Appropriate distance is > 2 to prevent barcode collisions 
+    when allowing 1 mismatch during demuxing
+    Example:
+    Consider the barcodes AAAGGG / ATTGGG. They have a distance/similarity
+    of 2. If the instrument reads AATGGG, it is equidistant from both of them
+
+    AAAGGG <- AATGGG -> ATTGGG
+
+    For standard 6 nt barcodes, this corresponds to requiring a similarity < 4
+    (i.e. erroring if similarity > 3)
+    
+    Because Hamming distance = length - similarity, we will measure similarity
+    and return "OK" if distance > 2. 
 
     returns string."""
 
@@ -116,12 +129,13 @@ def BaseMatch(barcodes):
     
     #print(simMatrix)
     
-    if simMatrix.max() > 3:
-        failStr = "FAILED: The following indexes share > 3 similar bases:\n"
+    if (len(barcodes[0]) - simMatrix.max()) <= 2:
+        failStr = "FAILED: The following indexes were too similar ( Hamming distance <= 2 ):\n"
+        failStr += "\t\tBC1\tBC2\tSimilarity\n"
         for i in range(numBC):
             for j in range(i,numBC):
                 if simMatrix[i,j] > 3:
-                    failStr += ('\t\t' + barcodes[i] + ' : ' + barcodes[j] + '\t' + str(simMatrix[i,j]) + '\n' )
+                    failStr += ('\t\t' + barcodes[i] + '\t' + barcodes[j] + '\t' + str(simMatrix[i,j]) + '\n' )
         return failStr
     else:
         return "OK"
@@ -131,7 +145,7 @@ def similarity(barcode1, barcode2):
     
     Counts the number of times barcode1 and barcode 2 have the same base
     at position i. 
-    (This is the Hamming distance)
+    (length - similarity = Hamming distance)
 
     returns an integer."""
     
@@ -142,4 +156,45 @@ def similarity(barcode1, barcode2):
     
     return simscore
     
+def entropy(barcodes):
+    """Compute Shannon entropy (in bits) of supplied barcode
 
+    returns an integer
+    """
+    if not checkUniformLength(barcodes):
+        return"FAILED: Cannot test until index length mismatch(es) fixed."
+    
+    numBC = len(barcodes)
+    simMatrix = np.asmatrix(np.zeros((numBC,numBC), np.int32))
+    return True
+
+def pwm(barcodes):
+    """Print the position weight matrix
+    
+    returns string"""
+
+    if not checkUniformLength(barcodes):
+        return"FAILED: Cannot test until index length mismatch(es) fixed."
+    
+    numBCs = len(barcodes)
+    lenBCs = len(barcodes[0])
+    PFMatrix = np.asmatrix(np.zeros((4,lenBCs), np.float))
+
+    for i,nt in enumerate(['A','C','G','T']):
+        for j in xrange(lenBCs):
+            PFMatrix[i,j] = count_nts_at_pos(barcodes, nt, j)
+
+    print "Position weight matrix: (A/C/G/T)"
+    PWMatrix = PFMatrix / np.float(numBCs)
+
+    print PWMatrix
+    if PWMatrix.min() <= 0.1:
+        return "WARNING: entropy is low. At least one position has a nt freq <= 10%"
+    else:
+        return "OK"
+
+def count_nts_at_pos(barcodes, nt, pos):
+    sum = 0    
+    for bc in barcodes:
+        if bc[pos] == nt: sum = sum+1
+    return sum
