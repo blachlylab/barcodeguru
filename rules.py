@@ -121,7 +121,7 @@ def BaseMatch(barcodes):
         for i in range(numBC):
             for j in range(i,numBC):
                 if simMatrix[i,j] > 3:
-                    failStr += ('\t\t' + barcodes[i] + ' : ' + barcodes[j] + '\n' )
+                    failStr += ('\t\t' + barcodes[i] + ' : ' + barcodes[j] + '\t' + str(simMatrix[i,j]) + '\n' )
         return failStr
     else:
         return "OK"
@@ -130,7 +130,8 @@ def similarity(barcode1, barcode2):
     """Compute a measure of similarity between barcode1 and barcode 2:
     
     Counts the number of times barcode1 and barcode 2 have the same base
-    at position i.
+    at position i. 
+    (This is the Hamming distance)
 
     returns an integer."""
     
